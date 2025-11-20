@@ -49,6 +49,11 @@
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
+        // --- KONFIGURASI GOOGLE SHEETS ---
+        // Ganti URL di bawah ini dengan URL Web App dari Google Apps Script Anda
+        // Contoh: "https://script.google.com/macros/s/AKfycbx.../exec"
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxIi6eyDkV8aAZYvlMNt1jtSnEKyXNo7msTO63q0DaukKEmJh0tB6tl95DLv7epO3cW/exec"; 
+
         // --- KOMPONEN IKON ---
         const Trophy = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
         const Shield = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
@@ -60,6 +65,8 @@
         const Share2 = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
         const Info = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
         const ArrowLeft = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
+        const BookOpen = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
+        const Send = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
 
         // --- APLIKASI UTAMA ---
         const PadelQuiz = () => {
@@ -68,12 +75,20 @@
             const [showResult, setShowResult] = useState(false);
             const [isGenerating, setIsGenerating] = useState(false);
             
+            // State untuk Lead Gen
+            const [leadName, setLeadName] = useState("");
+            const [leadContact, setLeadContact] = useState(""); 
+            const [leadSubmitted, setLeadSubmitted] = useState(false);
+            const [isSubmitting, setIsSubmitting] = useState(false); // New state
+            
             const resultCardRef = useRef(null);
 
             const [finalLevel, setFinalLevel] = useState(0);
             const [levelTitle, setLevelTitle] = useState("");
             const [levelDesc, setLevelDesc] = useState("");
-            const [levelColor, setLevelColor] = useState("blue"); 
+            const [levelColor, setLevelColor] = useState("blue");
+            
+            const [ebookTitle, setEbookTitle] = useState("");
 
             const levelReference = [
                 { title: "Beginner", range: "1.0 - 2.0", desc: "Fokus: Belajar kontrol bola & hilangkan takut kaca." },
@@ -149,12 +164,9 @@
                 }, 200);
             };
 
-            // --- FUNGSI BACK BARU ---
             const handleBack = () => {
                 if (currentStep > 0) {
-                    // 1. Mundur langkah
                     setCurrentStep(currentStep - 1);
-                    // 2. Hapus skor terakhir agar tidak duplikat jika dijawab ulang
                     const newScores = [...scores];
                     newScores.pop();
                     setScores(newScores);
@@ -171,19 +183,23 @@
                 if (avg <= 2.0) {
                     setLevelTitle("Beginner");
                     setLevelDesc("Kamu masih tahap adaptasi. Fokus utama adalah kontrol bola dan membiasakan diri dengan dinding kaca.");
-                    setLevelColor("emerald"); 
+                    setLevelColor("emerald");
+                    setEbookTitle("Panduan 7 Hari Menguasai Dasar Padel & Dinding Kaca");
                 } else if (avg <= 3.0) {
                     setLevelTitle("Lower Intermediate");
                     setLevelDesc("Kamu sudah bisa bermain rally. Fokus tingkatkan konsistensi dan kurangi kesalahan sendiri.");
-                    setLevelColor("blue"); 
+                    setLevelColor("blue");
+                    setEbookTitle("Drill Latihan Konsistensi: Kurangi Kesalahan Sendiri dalam 30 Menit");
                 } else if (avg <= 4.0) {
                     setLevelTitle("Intermediate");
                     setLevelDesc("Level paling umum di komunitas. Mengerti taktik, kurangi error, dan perbanyak variasi pukulan.");
-                    setLevelColor("indigo"); 
+                    setLevelColor("indigo");
+                    setEbookTitle("Teknik Lanjutan: Menguasai Bandeja & Vibora yang Mematikan");
                 } else {
                     setLevelTitle("Advanced");
                     setLevelDesc("Permainanmu solid dan agresif. Fokus pada strategi tim dan detail kompetisi.");
-                    setLevelColor("purple"); 
+                    setLevelColor("purple");
+                    setEbookTitle("Strategi Juara: Mindset & Taktik Tim untuk Turnamen");
                 }
                 setShowResult(true);
             };
@@ -192,6 +208,48 @@
                 setScores([]);
                 setCurrentStep(0);
                 setShowResult(false);
+                setLeadSubmitted(false);
+                setLeadName("");
+                setLeadContact("");
+            };
+
+            // --- UPDATE LOGIC KIRIM KE GOOGLE SHEETS ---
+            const handleLeadSubmit = (e) => {
+                e.preventDefault();
+                if (!leadName || !leadContact) return;
+
+                if (!GOOGLE_SCRIPT_URL) {
+                    alert("PENTING: Anda belum memasukkan URL Google Script di kode.");
+                    // Simulasi saja kalau lupa
+                    setLeadSubmitted(true);
+                    return;
+                }
+
+                setIsSubmitting(true);
+
+                // Persiapan Data Form
+                const formData = new FormData();
+                formData.append("nama", leadName);
+                formData.append("kontak", leadContact);
+                formData.append("level", finalLevel);
+                formData.append("ebook", ebookTitle);
+                
+                // Kirim ke Google Sheets
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    console.log('Success!', response);
+                    setLeadSubmitted(true);
+                    setIsSubmitting(false);
+                })
+                .catch(error => {
+                    console.error('Error!', error.message);
+                    // Tetap tampilkan sukses ke user agar UX tidak rusak, tapi log error di console
+                    setLeadSubmitted(true);
+                    setIsSubmitting(false);
+                });
             };
 
             const getColorClass = (colorType) => {
@@ -259,8 +317,6 @@
                     {/* Header */}
                     <div className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
                         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-center relative">
-                            
-                            {/* --- TOMBOL BACK DI HEADER (Jika bukan step 1 & bukan result) --- */}
                             {!showResult && currentStep > 0 && (
                                 <button 
                                     onClick={handleBack}
@@ -270,7 +326,6 @@
                                     <ArrowLeft className="w-5 h-5" />
                                 </button>
                             )}
-
                             <h1 className="text-lg font-bold flex items-center gap-2 text-slate-800">
                                 <Trophy className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                                 Padel Skill Check
@@ -335,7 +390,6 @@
                                 <div className="flex flex-col items-center animate-in">
                                     
                                     {/* --- CARD HASIL (Yang akan di-Download) --- */}
-                                    {/* Style Layout: Flex Column + Centered Content (Standard) */}
                                     <div 
                                         ref={resultCardRef}
                                         id="result-card"
@@ -346,13 +400,9 @@
                                             borderRadius: '24px'
                                         }} 
                                     >
-                                        {/* BACKGROUND LAYERS (Absolute) */}
                                         <div className="absolute inset-0 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 z-0"></div>
                                         
-                                        {/* ISI KONTEN (Relative z-10, Flexbox Layout) */}
                                         <div className="relative z-10 flex flex-col h-full w-full p-8 items-center text-center">
-                                            
-                                            {/* HEADER */}
                                             <div className="flex-none pt-4 pb-2">
                                                 <div className="flex items-center gap-2 opacity-90 justify-center">
                                                     <Award className="w-5 h-5 text-yellow-400" />
@@ -360,9 +410,7 @@
                                                 </div>
                                             </div>
 
-                                            {/* AREA TENGAH (Skor & Level) - Menggunakan flex-grow untuk centering */}
                                             <div className="flex-grow flex flex-col items-center justify-center w-full">
-                                                {/* Angka Besar */}
                                                 <div className="leading-none">
                                                     <span 
                                                         className="font-black tracking-tighter text-white drop-shadow-2xl block"
@@ -376,7 +424,6 @@
                                                     </span>
                                                 </div>
 
-                                                {/* Badge Level - Margin diperbesar dari mt-6 ke mt-10 */}
                                                 <div className={`
                                                     mt-10 w-full max-w-[240px] py-3 px-4 rounded-xl 
                                                     bg-gradient-to-r ${getColorClass(levelColor)}
@@ -388,7 +435,6 @@
                                                 </div>
                                             </div>
 
-                                            {/* DESKRIPSI (Box bawah) */}
                                             <div className="flex-none w-full mb-8">
                                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md w-full shadow-inner">
                                                     <p className="text-slate-100 text-xs leading-relaxed italic font-medium opacity-90">
@@ -397,7 +443,6 @@
                                                 </div>
                                             </div>
 
-                                            {/* FOOTER */}
                                             <div className="flex-none pb-2 opacity-40 flex items-center gap-2">
                                                 <Trophy className="w-3 h-3" />
                                                 <span className="text-[9px] font-mono tracking-[0.2em] uppercase">Padel Skill Check</span>
@@ -407,7 +452,8 @@
                                     </div>
                                     {/* --- AKHIR CARD --- */}
 
-                                    <div className="w-full max-w-[320px] mt-8 space-y-3 mb-12">
+                                    {/* SHARE BUTTONS */}
+                                    <div className="w-full max-w-[320px] mt-8 space-y-3 mb-10">
                                         <button
                                             onClick={handleShareOrDownload}
                                             disabled={isGenerating}
@@ -422,15 +468,80 @@
                                                 </>
                                             )}
                                         </button>
-                                        
-                                        <button
-                                            onClick={resetQuiz}
-                                            className="w-full py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <RefreshCw className="w-4 h-4" />
-                                            Coba Tes Lagi
-                                        </button>
                                     </div>
+
+                                    {/* --- LEAD MAGNET FORM (GOOGLE SHEETS INTEGRATED) --- */}
+                                    {!leadSubmitted ? (
+                                        <div className="w-full max-w-md px-4 mb-10">
+                                            <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+                                                {/* Aksen Dekorasi */}
+                                                <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500 opacity-5 rounded-full -mr-10 -mt-10"></div>
+                                                
+                                                <div className="relative z-10">
+                                                    <div className="flex items-start gap-3 mb-3">
+                                                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                                                            <BookOpen className="w-6 h-6" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-bold text-slate-800 text-sm leading-tight mb-1">
+                                                                Ingin naik ke level berikutnya?
+                                                            </h3>
+                                                            <p className="text-[11px] text-slate-500 leading-relaxed">
+                                                                Dapatkan <span className="font-bold text-blue-600">{ebookTitle}</span> (Gratis).
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <form onSubmit={handleLeadSubmit} className="space-y-3">
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Nama Kamu" 
+                                                            className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                                                            value={leadName}
+                                                            onChange={(e) => setLeadName(e.target.value)}
+                                                            required
+                                                        />
+                                                        <div className="flex gap-2">
+                                                            <input 
+                                                                type="text" 
+                                                                placeholder="No. WhatsApp / Email" 
+                                                                className="w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                                                                value={leadContact}
+                                                                onChange={(e) => setLeadContact(e.target.value)}
+                                                                required
+                                                            />
+                                                            <button 
+                                                                type="submit"
+                                                                disabled={isSubmitting}
+                                                                className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                                                            >
+                                                                {isSubmitting ? (
+                                                                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                                                                ) : (
+                                                                    <Send className="w-5 h-5" />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-[10px] text-center text-gray-400 mt-2">
+                                                            *Panduan akan dikirim langsung ke kontak kamu.
+                                                        </p>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="w-full max-w-md px-4 mb-10 animate-in">
+                                            <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center">
+                                                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                    <CheckCircle className="w-6 h-6" />
+                                                </div>
+                                                <h3 className="font-bold text-green-800 text-sm mb-1">Terima Kasih!</h3>
+                                                <p className="text-xs text-green-600">
+                                                    Panduan latihan sedang dikirim ke <b>{leadContact}</b>. Cek inbox kamu ya!
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* TABEL REFERENSI LEVEL */}
                                     <div className="w-full max-w-md mb-12 px-4">
@@ -461,6 +572,14 @@
                                                 );
                                             })}
                                         </div>
+
+                                        <button
+                                            onClick={resetQuiz}
+                                            className="w-full py-4 text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center gap-2 mt-4"
+                                        >
+                                            <RefreshCw className="w-4 h-4" />
+                                            Coba Tes Lagi
+                                        </button>
                                     </div>
 
                                 </div>
