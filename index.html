@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Padel Level Calculator</title>
+    <meta name="description" content="Cek level main padel kamu untuk Reclub dan Playtomic">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel untuk compile JSX di browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- html2canvas untuk Screenshot -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- Font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        
+        /* Animasi Custom */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        /* Hide Scrollbar but keep functionality */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-800 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // --- KOMPONEN IKON ---
+        const Trophy = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
+        const Shield = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+        const Activity = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>;
+        const Zap = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+        const CheckCircle = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        const Award = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>;
+        const RefreshCw = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>;
+        const Share2 = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
+        const Info = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+        const ArrowLeft = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
+
+        // --- APLIKASI UTAMA ---
+        const PadelQuiz = () => {
+            const [currentStep, setCurrentStep] = useState(0);
+            const [scores, setScores] = useState([]);
+            const [showResult, setShowResult] = useState(false);
+            const [isGenerating, setIsGenerating] = useState(false);
+            
+            const resultCardRef = useRef(null);
+
+            const [finalLevel, setFinalLevel] = useState(0);
+            const [levelTitle, setLevelTitle] = useState("");
+            const [levelDesc, setLevelDesc] = useState("");
+            const [levelColor, setLevelColor] = useState("blue"); 
+
+            const levelReference = [
+                { title: "Beginner", range: "1.0 - 2.0", desc: "Fokus: Belajar kontrol bola & hilangkan takut kaca." },
+                { title: "Lower Intermediate", range: "2.5 - 3.0", desc: "Fokus: Konsistensi rally & posisi maju-mundur." },
+                { title: "Intermediate", range: "3.5 - 4.0", desc: "Fokus: Teknik Bandeja, Lob taktis, & main kaca." },
+                { title: "Advanced", range: "4.5+", desc: "Fokus: Power, Spin, strategi tim, & mental kompetisi." }
+            ];
+
+            useEffect(() => {
+                window.scrollTo(0,0);
+            }, [currentStep, showResult]);
+
+            const questions = [
+                {
+                    id: 1,
+                    category: "Defense & Dinding (The Glass)",
+                    icon: <Shield className="w-6 h-6 text-blue-500" />,
+                    question: "Bagaimana reaksi kamu saat bola lawan memantul ke kaca belakang?",
+                    options: [
+                        { text: "Panik / Lari menghindar. Saya sering pukul bola sebelum kena kaca.", value: 1.0 },
+                        { text: "Sudah berani menunggu bola mantul, tapi cuma bisa balikin bola pelan.", value: 3.0 },
+                        { text: "Nyaman. Saya bisa menunggu bola turun dan mengarahkannya kembali.", value: 3.5 },
+                        { text: "Saya bisa menyerang balik (Bajada) dari pantulan kaca tinggi.", value: 4.5 }
+                    ]
+                },
+                {
+                    id: 2,
+                    category: "Net Game (Voli & Smash)",
+                    icon: <Activity className="w-6 h-6 text-green-500" />,
+                    question: "Saat berada di depan net, apa yang biasanya terjadi?",
+                    options: [
+                        { text: "Saya takut di depan net. Sering kena net atau out jauh.", value: 1.0 },
+                        { text: "Bisa blok bola, tapi bolanya sering nanggung (melambung).", value: 3.0 },
+                        { text: "Voli saya terarah ke bawah/sudut. Smash saya jarang mati sendiri.", value: 4.0 },
+                        { text: "Punya pukulan 'Bandeja' atau 'Vibora' yang konsisten dan mematikan.", value: 5.0 }
+                    ]
+                },
+                {
+                    id: 3,
+                    category: "Serve & Return",
+                    icon: <Zap className="w-6 h-6 text-yellow-500" />,
+                    question: "Seberapa konsisten Serve dan Return kamu?",
+                    options: [
+                        { text: "Sering double fault. Return sering luput.", value: 1.0 },
+                        { text: "Serve masuk (pelan). Return sekadar masuk lapangan lawan.", value: 2.5 },
+                        { text: "Serve bisa diarahkan ke kaca. Return bisa di-lob tinggi.", value: 3.5 },
+                        { text: "Serve tajam & menekan. Return agresif ke kaki lawan.", value: 4.5 }
+                    ]
+                },
+                {
+                    id: 4,
+                    category: "Konsistensi (Unforced Errors)",
+                    icon: <CheckCircle className="w-6 h-6 text-purple-500" />,
+                    question: "Dalam satu game, seberapa sering kamu mati sendiri (bola nyangkut/out)?",
+                    options: [
+                        { text: "Sering sekali. Rally jarang lewat dari 3 pukulan.", value: 1.0 },
+                        { text: "Lumayan sering, terutama kalau bola agak susah.", value: 3.0 },
+                        { text: "Jarang, kecuali lawan memang menekan/memberi bola sulit.", value: 4.0 },
+                        { text: "Hampir tidak pernah mati bola mudah. Sangat sabar.", value: 5.0 }
+                    ]
+                }
+            ];
+
+            const handleAnswer = (value) => {
+                const newScores = [...scores, value];
+                setScores(newScores);
+                setTimeout(() => {
+                    if (currentStep < questions.length - 1) {
+                        setCurrentStep(currentStep + 1);
+                    } else {
+                        calculateResult(newScores);
+                    }
+                }, 200);
+            };
+
+            // --- FUNGSI BACK BARU ---
+            const handleBack = () => {
+                if (currentStep > 0) {
+                    // 1. Mundur langkah
+                    setCurrentStep(currentStep - 1);
+                    // 2. Hapus skor terakhir agar tidak duplikat jika dijawab ulang
+                    const newScores = [...scores];
+                    newScores.pop();
+                    setScores(newScores);
+                }
+            };
+
+            const calculateResult = (finalScores) => {
+                const sum = finalScores.reduce((a, b) => a + b, 0);
+                let avg = sum / finalScores.length;
+                avg = Math.round(avg * 2) / 2;
+                if (avg < 1.0) avg = 1.0;
+                setFinalLevel(avg);
+                
+                if (avg <= 2.0) {
+                    setLevelTitle("Beginner");
+                    setLevelDesc("Kamu masih tahap adaptasi. Fokus utama adalah kontrol bola dan membiasakan diri dengan dinding kaca.");
+                    setLevelColor("emerald"); 
+                } else if (avg <= 3.0) {
+                    setLevelTitle("Lower Intermediate");
+                    setLevelDesc("Kamu sudah bisa bermain rally. Fokus tingkatkan konsistensi dan kurangi kesalahan sendiri.");
+                    setLevelColor("blue"); 
+                } else if (avg <= 4.0) {
+                    setLevelTitle("Intermediate");
+                    setLevelDesc("Level paling umum di komunitas. Mengerti taktik, kurangi error, dan perbanyak variasi pukulan.");
+                    setLevelColor("indigo"); 
+                } else {
+                    setLevelTitle("Advanced");
+                    setLevelDesc("Permainanmu solid dan agresif. Fokus pada strategi tim dan detail kompetisi.");
+                    setLevelColor("purple"); 
+                }
+                setShowResult(true);
+            };
+
+            const resetQuiz = () => {
+                setScores([]);
+                setCurrentStep(0);
+                setShowResult(false);
+            };
+
+            const getColorClass = (colorType) => {
+                const colors = {
+                    emerald: "from-emerald-500 to-teal-600 border-emerald-400",
+                    blue: "from-blue-500 to-cyan-600 border-blue-400",
+                    indigo: "from-indigo-500 to-purple-600 border-indigo-400",
+                    purple: "from-purple-500 to-pink-600 border-purple-400"
+                };
+                return colors[colorType] || colors.blue;
+            };
+
+            const handleShareOrDownload = async () => {
+                if (!resultCardRef.current) return;
+                setIsGenerating(true);
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                try {
+                    const canvas = await html2canvas(resultCardRef.current, {
+                        scale: 3,
+                        backgroundColor: null, 
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true,
+                        width: resultCardRef.current.scrollWidth,
+                        height: resultCardRef.current.scrollHeight
+                    });
+                    
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) {
+                            setIsGenerating(false);
+                            return;
+                        }
+                        const fileName = `Padel-Level-${finalLevel}.png`;
+                        const file = new File([blob], fileName, { type: "image/png" });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'Padel Skill Check',
+                                    text: `Cek level Padel saya! Saya ada di level ${finalLevel}`,
+                                });
+                            } catch (error) {
+                                console.log("Share dibatalkan");
+                            }
+                        } else {
+                            const image = canvas.toDataURL("image/png");
+                            const link = document.createElement('a');
+                            link.href = image;
+                            link.download = fileName;
+                            link.click();
+                        }
+                        setIsGenerating(false);
+                    }, 'image/png');
+                } catch (err) {
+                    console.error("Gagal generate gambar", err);
+                    alert("Gagal membuat gambar. Coba screenshot manual.");
+                    setIsGenerating(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
+                    {/* Header */}
+                    <div className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+                        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-center relative">
+                            
+                            {/* --- TOMBOL BACK DI HEADER (Jika bukan step 1 & bukan result) --- */}
+                            {!showResult && currentStep > 0 && (
+                                <button 
+                                    onClick={handleBack}
+                                    className="absolute left-4 p-2 text-slate-400 hover:text-slate-800 transition-colors rounded-full hover:bg-slate-100"
+                                    aria-label="Kembali"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </button>
+                            )}
+
+                            <h1 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                                <Trophy className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                                Padel Skill Check
+                            </h1>
+                        </div>
+                    </div>
+
+                    <div className="flex-grow flex items-start justify-center p-4 pt-6">
+                        <div className="w-full max-w-md">
+                            
+                            {!showResult ? (
+                                <div className="animate-in">
+                                    {/* Progress Bar */}
+                                    <div className="mb-6">
+                                        <div className="flex justify-between text-xs text-gray-400 mb-2 font-medium">
+                                            <span>Pertanyaan {currentStep + 1} dari {questions.length}</span>
+                                            <span>{Math.round(((currentStep + 1) / questions.length) * 100)}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div 
+                                                className="bg-slate-800 h-2 rounded-full transition-all duration-500 ease-out"
+                                                style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Card Pertanyaan */}
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                                                {questions[currentStep].icon}
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                {questions[currentStep].category}
+                                            </span>
+                                        </div>
+                                        
+                                        <h2 className="text-lg font-bold text-slate-800 mb-6 leading-snug">
+                                            {questions[currentStep].question}
+                                        </h2>
+
+                                        <div className="space-y-3" key={currentStep}>
+                                            {questions[currentStep].options.map((option, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => handleAnswer(option.value)}
+                                                    className="w-full text-left p-4 rounded-xl border border-gray-200 bg-white hover:border-slate-800 hover:bg-slate-50 active:scale-[0.99] transition-all duration-150 group outline-none focus:ring-2 focus:ring-slate-800 focus:ring-offset-1"
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-5 h-5 rounded-full border-2 border-gray-300 group-hover:border-slate-800 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors">
+                                                            <div className="w-2.5 h-2.5 rounded-full bg-slate-800 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        </div>
+                                                        <span className="text-sm text-slate-600 group-hover:text-slate-900 font-medium leading-relaxed">{option.text}</span>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Result View */
+                                <div className="flex flex-col items-center animate-in">
+                                    
+                                    {/* --- CARD HASIL (Yang akan di-Download) --- */}
+                                    {/* Style Layout: Flex Column + Centered Content (Standard) */}
+                                    <div 
+                                        ref={resultCardRef}
+                                        id="result-card"
+                                        className="relative overflow-hidden bg-slate-900 text-white shadow-2xl mx-auto flex flex-col"
+                                        style={{ 
+                                            width: '320px', 
+                                            height: '568px', /* Ratio 9:16 */
+                                            borderRadius: '24px'
+                                        }} 
+                                    >
+                                        {/* BACKGROUND LAYERS (Absolute) */}
+                                        <div className="absolute inset-0 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 z-0"></div>
+                                        
+                                        {/* ISI KONTEN (Relative z-10, Flexbox Layout) */}
+                                        <div className="relative z-10 flex flex-col h-full w-full p-8 items-center text-center">
+                                            
+                                            {/* HEADER */}
+                                            <div className="flex-none pt-4 pb-2">
+                                                <div className="flex items-center gap-2 opacity-90 justify-center">
+                                                    <Award className="w-5 h-5 text-yellow-400" />
+                                                    <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-slate-200">Official Rating</span>
+                                                </div>
+                                            </div>
+
+                                            {/* AREA TENGAH (Skor & Level) - Menggunakan flex-grow untuk centering */}
+                                            <div className="flex-grow flex flex-col items-center justify-center w-full">
+                                                {/* Angka Besar */}
+                                                <div className="leading-none">
+                                                    <span 
+                                                        className="font-black tracking-tighter text-white drop-shadow-2xl block"
+                                                        style={{ 
+                                                            fontSize: '110px', 
+                                                            lineHeight: '1',
+                                                            textShadow: '0 10px 40px rgba(0,0,0,0.5)' 
+                                                        }}
+                                                    >
+                                                        {finalLevel.toFixed(1)}
+                                                    </span>
+                                                </div>
+
+                                                {/* Badge Level - Margin diperbesar dari mt-6 ke mt-10 */}
+                                                <div className={`
+                                                    mt-10 w-full max-w-[240px] py-3 px-4 rounded-xl 
+                                                    bg-gradient-to-r ${getColorClass(levelColor)}
+                                                    shadow-lg border border-white/20 backdrop-blur-md
+                                                `}>
+                                                    <span className="block text-sm font-bold text-white uppercase tracking-wider shadow-black drop-shadow-md">
+                                                        {levelTitle}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* DESKRIPSI (Box bawah) */}
+                                            <div className="flex-none w-full mb-8">
+                                                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-md w-full shadow-inner">
+                                                    <p className="text-slate-100 text-xs leading-relaxed italic font-medium opacity-90">
+                                                        "{levelDesc}"
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* FOOTER */}
+                                            <div className="flex-none pb-2 opacity-40 flex items-center gap-2">
+                                                <Trophy className="w-3 h-3" />
+                                                <span className="text-[9px] font-mono tracking-[0.2em] uppercase">Padel Skill Check</span>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                    {/* --- AKHIR CARD --- */}
+
+                                    <div className="w-full max-w-[320px] mt-8 space-y-3 mb-12">
+                                        <button
+                                            onClick={handleShareOrDownload}
+                                            disabled={isGenerating}
+                                            className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-200 border border-slate-800"
+                                        >
+                                            {isGenerating ? (
+                                                <span className="animate-pulse text-sm">Memproses...</span>
+                                            ) : (
+                                                <>
+                                                    <Share2 className="w-5 h-5" />
+                                                    <span className="text-sm">Share ke Instagram</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        
+                                        <button
+                                            onClick={resetQuiz}
+                                            className="w-full py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <RefreshCw className="w-4 h-4" />
+                                            Coba Tes Lagi
+                                        </button>
+                                    </div>
+
+                                    {/* TABEL REFERENSI LEVEL */}
+                                    <div className="w-full max-w-md mb-12 px-4">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center justify-center gap-2">
+                                            <Info className="w-4 h-4" />
+                                            Panduan Level
+                                        </h3>
+                                        <div className="space-y-2">
+                                            {levelReference.map((level, idx) => {
+                                                const isActive = levelTitle === level.title;
+                                                return (
+                                                    <div 
+                                                        key={idx} 
+                                                        className={`p-3 rounded-xl border text-xs transition-all duration-300 flex flex-col gap-1 ${
+                                                            isActive 
+                                                                ? 'border-blue-500 bg-blue-50 text-blue-900 shadow-sm' 
+                                                                : 'border-gray-200 bg-white text-gray-500'
+                                                        }`}
+                                                    >
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-bold">{level.title}</span>
+                                                            <span className="font-mono bg-white/50 px-2 py-0.5 rounded border border-black/5 text-[10px]">{level.range}</span>
+                                                        </div>
+                                                        <p className={`text-[11px] leading-relaxed ${isActive ? 'text-blue-700' : 'text-gray-400'}`}>
+                                                            {level.desc}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PadelQuiz />);
+    </script>
+</body>
+</html>
